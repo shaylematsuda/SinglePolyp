@@ -2,8 +2,11 @@
 title: "Single Polyp Stats"
 author: "Shayle Matsuda"
 date: "10/28/2021"
-output: html_document
-editor_options: 
+output:
+  html_document: default
+  word_document: default
+  pdf_document: default
+editor_options:
   chunk_output_type: console
 ---
 PERMANOVA for single polyp metabolomics
@@ -13,7 +16,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 # libraries
-```{r}  
+```{r,echo=FALSE}  
 knitr::opts_chunk$set(warning=FALSE, message=FALSE)
 library(ape)
 
@@ -48,40 +51,8 @@ Load in data:
 mData<-read.csv("single polyp master with PCoA coordinates.csv") #metabolomics data and xy coords from Ty
 mData$ATTRIBUTE_Sample_Name<-as.factor(as.character(mData$ATTRIBUTE_Sample_Name))
 mData$ATTRIBUTE_Colony_number<-as.factor(as.character(mData$ATTRIBUTE_Colony_number))
-mData<-subset(mData, ATTRIBUTE_Colony_number!="976B")
+mData<-subset(mData, ATTRIBUTE_Colony_number!="976B")#remove dup
 
-```
-
-see if you can get this all into phyloseq...so far nope
-```{r}
-#read in sample data
-mData.sd<-mData[,1:11]
-mData.sd2 <- mData.sd[,-1] #make first col row names
-rownames(mData.sd2) <- mData.sd[,1] 
-
-
-sam <- mData.sd2
-
-
-#Make "otu able" aka abundances
-
-OTU<-mData[, -c(2:11)]
-OTU2 <- OTU[,-1] #make first col row names
-rownames(OTU2) <- OTU[,1] 
-
-
-
-#tax table annotations_100.taxonomy.csv
-TAX<- read.csv("Tax.csv", colClasses = "character")
-tax1 <- as.matrix(TAX[, -1], dimnames = list(TAX$OTU, colnames(TAX[-1])))
-rownames(tax1) <- TAX$OTU
-tax <- tax_table(tax1)
-
-
-# Read the data into phyloseq
-mData.seq = phyloseq(OTU2,sam,TAX) 
-Bac.seq
-Bac.seq.df <- sample_data(Bac.seq)
 ```
 
 
@@ -94,7 +65,7 @@ PERMANOVA
 mData.sd<-mData[,1:11] #metadata
 mData.meta<-mData[,12:566] #metabolomics data
 # mData.PCoA<-mData[,567:568] #ty's x and y, but can't use these for STATS
-plot(mData.PCoA) #plot Ty's x and y, to confirm your distance matrix cooresponds right
+# plot(mData.PCoA) #plot Ty's x and y, to confirm your distance matrix cooresponds right
 
 
 ####################### Between colonies and Between Sample points
@@ -102,7 +73,8 @@ plot(mData.PCoA) #plot Ty's x and y, to confirm your distance matrix cooresponds
 
 # Bray-Curtis distance 
 mData.dist <- vegdist(mData[,12:566],  method = "bray")
-# write.csv(mData.dist, "mData.dist.csv")
+mData.dist.mat<-as.matrix(mData.dist)
+ #write.csv(mData.dist.mat, "mData.dist.bc.csv")
 
 PCOA <- pcoa(mData.dist) #pcoa
 barplot(PCOA$values$Relative_eig[1:10]) # plot the eigenvalues 
@@ -113,7 +85,7 @@ mData.dist2<-as.matrix(mData.dist)
 
  mData.dist.sd<- inner_join(rownames_to_column(mData.sd), rownames_to_column(data.frame(PCOAaxes)), type = "right", by = "rowname") #merge PCOAaxes and metadata
 
-############ plot Between colonies 
+############ plot Between colonies ####
 
 BetweenColonies_plot<-ggplot(mData.dist.sd, aes(x = Axis.1, y = Axis.2)) + 
   geom_point(aes(colour = ATTRIBUTE_Colony_number), size = 4) +
@@ -148,7 +120,26 @@ adonis(mData.dist~Area*ATTRIBUTE_Colony_number, data=mData.sd)
 # ATTRIBUTE_Colony_number       18   18.7315 1.04064  34.712 0.64527  0.001 ***
 # Area:ATTRIBUTE_Colony_number  90    2.7332 0.03037   1.013 0.09415  0.445    
 # Residuals                    228    6.8353 0.02998         0.23546           
-# Total                        341   29.0290                 1.00000           
+# Total                        341   29.0290                 1.00000    
+
+adonis(mData.dist~ATTRIBUTE_Colony_number*ATTRIBUTE_Branch_Letter*Area, data=mData.sd)
+# 
+#                                                       Df SumsOfSqs MeanSqs F.Model      R2 Pr(>F)
+# Area                                                   5    0.7291       0       0 0.02511      1
+# ATTRIBUTE_Colony_number                               18   18.7315       1       0 0.64527      1
+# ATTRIBUTE_Branch_Letter                                2    0.1206       0       0 0.00415      1
+# Area:ATTRIBUTE_Colony_number                          90    2.7332       0       0 0.09415      1
+# Area:ATTRIBUTE_Branch_Letter                          10    0.2231       0       0 0.00768      1
+# ATTRIBUTE_Colony_number:ATTRIBUTE_Branch_Letter       36    1.7009       0       0 0.05859      1
+# Area:ATTRIBUTE_Colony_number:ATTRIBUTE_Branch_Letter 180    4.7907       0       0 0.16503      1
+# Residuals                                              0    0.0000    -Inf         0.00000       
+# Total                                                341   29.0290                 1.00000       
+
+
+adonis(mData.dist~ATTRIBUTE_Branch_Letter*Area, data=mData.sd)
+
+
+
 
 #Plot: No patterns
 BetweenSampArea_plot<-ggplot(mData.dist.sd, aes(x = Axis.1, y = Axis.2)) + 
@@ -252,43 +243,35 @@ Branch945_plot<-ggplot(mData.Branch945.dist.sd, aes(x = Axis.1, y = Axis.2)) +
   ggtitle("PCoA Between Branches 945") +
   theme_classic();Branch945_plot
 
-
-
-####### colony 957  ####### 
-mData.Branch957<-subset(mData, ATTRIBUTE_Colony_number=="957") 
+# test diff between polyps within branch
 #subset data
-mData.Branch957.sd<-mData.Branch957[,1:11]
+mData.Branch945.sd<-mData.Branch945[,1:11]
 # Bray-Curtis distance 
-mData.Branch957.dist <- vegdist(mData.Branch957[,12:566],  method = "bray")
+mData.Branch945.dist <- vegdist(mData.Branch945[,12:566],  method = "bray")
 
-PCOA <- pcoa(mData.Branch957.dist) #pcoa
+PCOA <- pcoa(mData.Branch945.dist) #pcoa
 barplot(PCOA$values$Relative_eig[1:10]) # plot the eigenvalues 
 biplot.pcoa(PCOA) #plot
 PCOAaxes <- PCOA$vectors[,c(1,2)] #for visualization only
 
- mData.Branch957.dist.sd<- inner_join(rownames_to_column(mData.Branch957.sd), rownames_to_column(data.frame(PCOAaxes)), type = "right", by = "rowname") #merge PCOAaxes and metadata
+ mData.Branch945.dist.sd<- inner_join(rownames_to_column(mData.Branch945.sd), rownames_to_column(data.frame(PCOAaxes)), type = "right", by = "rowname") #merge PCOAaxes and metadata
 
 
 set.seed(30)
-adonis(mData.Branch957.dist~Area, data=mData.Branch957.sd)
-# #            Df SumsOfSqs  MeanSqs F.Model      R2 Pr(>F)
-# Area       5  0.084667 0.016933  1.1214 0.31845  0.303
-# Residuals 12  0.181202 0.015100         0.68155       
-# Total     17  0.265869                  1.00000       
+adonis(mData.Branch945.dist~Area, data=mData.Branch945.sd)
+#            Df SumsOfSqs  MeanSqs F.Model      R2 Pr(>F)
+# Area       5   0.16096 0.032193 0.96577 0.28694  0.499
+# Residuals 12   0.40001 0.033334         0.71306       
+# Total     17   0.56097                  1.00000    
 
 #Plot by Colony number (see that still cluster by colony)
-Branch957_plot<-ggplot(mData.Branch957.dist.sd, aes(x = Axis.1, y = Axis.2)) + 
+Branch945_plot<-ggplot(mData.Branch945.dist.sd, aes(x = Axis.1, y = Axis.2)) + 
   geom_point(aes(colour = ATTRIBUTE_Branch_Letter), size = 2) +
   #scale_color_manual(values=Sp.colors)+
   #geom_text(label = rownames(scores), nudge_x = 0.05, nudge_y = 0.05,check_overlap = T) +
  # stat_ellipse(aes(x = Axis.1, y = Axis.2, colour = ATTRIBUTE_Colony_number), linetype = 2) +
-  ggtitle("PCoA Between Branches 957") +
-  theme_classic();Branch957_plot
-
-
-
-
-
+  ggtitle("PCoA Between Branches 945") +
+  theme_classic();Branch945_plot
 
 
 
@@ -822,6 +805,45 @@ Branch984_plot<-ggplot(mData.Branch984.dist.sd, aes(x = Axis.1, y = Axis.2)) +
 
 
 ```
+
+Within branches
+```{r}
+
+####### colony 957  ####### #not working yet
+#subset branch A
+mData.Branch957.A<-subset(mData.Branch957, ATTRIBUTE_Branch_Letter=="A") 
+#subset data
+mData.Branch957.A.sd<-mData.Branch957.A[,1:11]
+# Bray-Curtis distance 
+mData.Branch957.A.dist <- vegdist(mData.Branch957.A[,12:566],  method = "bray")
+
+PCOA <- pcoa(mData.Branch957.A.dist) #pcoa
+barplot(PCOA$values$Relative_eig[1:10]) # plot the eigenvalues 
+biplot.pcoa(PCOA) #plot
+PCOAaxes <- PCOA$vectors[,c(1,2)] #for visualization only
+
+ mData.Branch957.A.dist.sd<- inner_join(rownames_to_column(mData.Branch957.A.sd), rownames_to_column(data.frame(PCOAaxes)), type = "right", by = "rowname") #merge PCOAaxes and metadata
+
+
+set.seed(30)
+adonis(mData.Branch957.A.dist~Area, data=mData.Branch957.A.sd)
+#           Df SumsOfSqs MeanSqs F.Model R2 Pr(>F)
+# Area       5  0.097114       0       0  1      1
+# Residuals  0  0.000000    -Inf          0       
+# Total      5  0.097114                  1       
+
+
+
+
+
+
+
+
+
+```
+
+
+
 Plot all Colonies in same plot
 ```{r}
 ###### All plots together
@@ -852,5 +874,53 @@ grid.arrange(Branch945_plot, Branch957_plot, Branch959_plot,Branch960_plot,
              Branch965_plot,Branch966_plot,Branch967_plot,Branch968_plot,
              Branch969_plot,Branch971_plot,Branch974_plot,Branch976_plot,
              Branch978_plot,Branch983_plot,Branch984_plot,nrow = 5)
+```
+
+2022 Jan 13
+Spatial autocorr stats
+
+Within a branch, physical dist vs dist matrix dists, then run mantel to look for correlation.
+Try to create a df with pairs of points, only keep 
+```{r}
+#make a copy of the dataframe
+mData.metadata<-subset(mData.sd, select=c("Distance.to.base","ATTRIBUTE_Sample_Name","ATTRIBUTE_Colony_number","ATTRIBUTE_Branch_Letter"))
+#write.csv(mData.metadata,"mData.metadata2.csv")
+
+#create dist matrix wtih physical and bc dist (did in excel)
+Dist.compare.df<-read.csv("singlepolyp_bcDist_pairs.csv")
+
+#run pearson correlation 
+library(ggpubr)
+shapiro.test(Dist.compare.df$bc.dist)
+shapiro.test(Dist.compare.df$physical.dist)
+
+ggqqplot(Dist.compare.df$bc.dist, ylab = "bc.dist")
+# wt
+ggqqplot(Dist.compare.df$physical.dist, ylab = "physical.dist")
+
+cor(Dist.compare.df$bc.dist, Dist.compare.df$physical.dist, method = c("pearson")) # 0.1669614 = corr 
+
+
+#coeefficient Pearsons
+cor.test(Dist.compare.df$bc.dist, Dist.compare.df$physical.dist, method = c("pearson"))
+
+#coeefficient Pearsons rank-based bc no normal
+cor.test(Dist.compare.df$bc.dist, Dist.compare.df$physical.dist, method = c("kendall"))
+
+
+#Transform the data
+Dist.compare.df2<-Dist.compare.df #make a copy
+hist(Dist.compare.df2$bc.dist)
+hist(Dist.compare.df2$physical.dist)
+
+Dist.compare.df2$physical.dist_log<-log10(1+Dist.compare.df2$physical.dist)
+hist(Dist.compare.df2$physical.dist_log)
+Dist.compare.df2$physical.dist_sq<-sqrt(Dist.compare.df2$physical.dist)
+hist(Dist.compare.df2$physical.dist_sq)
+Dist.compare.df2$physical.dist_cub<-Dist.compare.df2$physical.dist^(1/3)
+hist(Dist.compare.df2$physical.dist_cub)
+ggqqplot(Dist.compare.df2$physical.dist_sq, ylab = "physical.dists")
+
+
 ```
 
