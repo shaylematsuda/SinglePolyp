@@ -3,21 +3,22 @@ title: "Single Polyp Stats"
 author: "Shayle Matsuda"
 date: "10/28/2021"
 output:
-  html_document: default
-  word_document: default
   pdf_document: default
+  word_document: default
+  html_document: 
+    self_contained: no
 editor_options:
   chunk_output_type: console
 ---
 PERMANOVA for single polyp metabolomics
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+#knitr::opts_chunk$set(echo = TRUE)
 ```
 
 # libraries
 ```{r,echo=FALSE}  
-knitr::opts_chunk$set(warning=FALSE, message=FALSE)
+# knitr::opts_chunk$set(warning=FALSE, message=FALSE)
 library(ape)
 
 library(plyr) 
@@ -67,7 +68,7 @@ mData.meta<-mData[,12:566] #metabolomics data
 # mData.PCoA<-mData[,567:568] #ty's x and y, but can't use these for STATS
 # plot(mData.PCoA) #plot Ty's x and y, to confirm your distance matrix cooresponds right
 
-
+write.csv(mData.sd,"mData.sd3.csv")
 ####################### Between colonies and Between Sample points
 
 
@@ -113,6 +114,16 @@ adonis(mData.dist~Area, data=mData.sd)
 # Area        5    0.7291 0.145811  1.7312 0.02511  0.017 *
 # Residuals 336   28.3000 0.084226         0.97489         
 # Total     341   29.0290                  1.00000    
+
+mData.sd$PolypZone2<-mData.sd$Area #duplicate col
+mData.sd$PolypZone2[mData.sd$PolypZone2 == "Touching 1"] <- "Base"
+mData.sd$PolypZone2[mData.sd$PolypZone2 == "Touching 2"] <- "Base"
+mData.sd$PolypZone2[mData.sd$PolypZone2 == "Midle 1"] <- "Mid"
+mData.sd$PolypZone2[mData.sd$PolypZone2 == "Midle 2"] <- "Mid"
+
+pairwise.adonis(mData.dist, mData.sd$PolypZone2)
+
+
 
 adonis(mData.dist~Area*ATTRIBUTE_Colony_number, data=mData.sd)
 #                               Df SumsOfSqs MeanSqs F.Model      R2 Pr(>F)    
@@ -883,11 +894,12 @@ Within a branch, physical dist vs dist matrix dists, then run mantel to look for
 Try to create a df with pairs of points, only keep 
 ```{r}
 #make a copy of the dataframe
-mData.metadata<-subset(mData.sd, select=c("Distance.to.base","ATTRIBUTE_Sample_Name","ATTRIBUTE_Colony_number","ATTRIBUTE_Branch_Letter"))
+# mData.metadata<-subset(mData.sd, select=c("Distance.to.base","ATTRIBUTE_Sample_Name","ATTRIBUTE_Colony_number","ATTRIBUTE_Branch_Letter")) 
+
 #write.csv(mData.metadata,"mData.metadata2.csv")
 
 #create dist matrix wtih physical and bc dist (did in excel)
-Dist.compare.df<-read.csv("singlepolyp_bcDist_pairs.csv")
+Dist.compare.df<-read.csv("distances.csv")
 
 #run pearson correlation 
 library(ggpubr)
@@ -920,6 +932,749 @@ hist(Dist.compare.df2$physical.dist_sq)
 Dist.compare.df2$physical.dist_cub<-Dist.compare.df2$physical.dist^(1/3)
 hist(Dist.compare.df2$physical.dist_cub)
 ggqqplot(Dist.compare.df2$physical.dist_sq, ylab = "physical.dists")
+
+
+Dist.compare.df$col.branch<-paste(Dist.compare.df$Coral, Dist.compare.df$Branch)
+
+# all together
+alldist_plot<-ggplot(data=Dist.compare.df, aes(x=physical.dist, y=bc.dist, color=col.branch)) +
+  geom_point(aes(color=col.branch), size=4, show.legend = T, alpha=I(0.1))+
+geom_smooth(method = "lm", fill=NA, size=.5)+  #
+  #scale_color_manual(values=c("dodgerblue3", "darkred"))+
+  xlab("physical.dist") + #Label the X Axis
+  #ylim(0, 11) + #set Y limits
+  #scale_y_log10()+
+  theme_bw() + #Set the background color
+  theme(axis.line = element_line(color = 'black'), #Set the axes color
+        axis.title=element_text(size=14,face="bold"), #Set axis format
+        panel.border = element_blank(), #Set the border
+        panel.grid.major = element_blank(), #Set the major gridlines
+        panel.grid.minor = element_blank(), #Set the minor gridlines
+        text = element_text(size=18),  # set element text
+        plot.background =element_blank(), #Set the plot background
+        legend.key = element_blank()) + #Set plot legend key
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect(colour = "black", size=1))+
+        theme(aspect.ratio=1)+
+  ylab(expression(paste("bc.dist"))) +
+  ggtitle("all")+
+  theme(plot.title = element_text(size=20, face = "italic"));alldist_plot
+
+
+#all as boxplot
+
+boxplot(bc.dist~physical.dist, data=Dist.compare.df, notch=TRUE,
+  col=(c("gold","darkgreen")),
+  main="Spatial distance", xlab="Location")
+
+
+Dist.compare.df$PolypZones<-as.factor(Dist.compare.df$PolypZones)
+
+Dist.compare.df$PolypZones <- factor(Dist.compare.df$PolypZones, levels = c("Base", "Base-4", "4_5", "Base-5", "5_6","4_6", "Base-6"))
+
+#means
+distcompare.means<- ddply(Dist.compare.df, c(  "PolypZones"), summarise, #summarize cell counts
+                 N    = length(bc.dist[!is.na(bc.dist)]), #calculate the length of the data frame, excluding NA’s *this part is important*
+                 mean = mean(bc.dist, na.rm=TRUE), #calculate mean of response variable, removing NA's
+                 sd   = sd(bc.dist, na.rm=TRUE), #calculate standard deviation
+                 se   = sd / sqrt(N), #calculate standard error
+                 max = max(bc.dist, na.rm=TRUE) #calculate max, could also calculate min () if desired
+)
+distcompare.means
+
+ggplot(distcompare.means, aes(x=PolypZones, y=mean, fill=PolypZones)) + 
+  ylim(0.16,.3)+
+  geom_point(aes(fill=PolypZones))+
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se),
+                width=0.1, show.legend = F)+
+  theme(axis.line = element_line(color = 'black'), #Set the axes color
+        axis.title=element_text(size=14,face="bold"), #Set axis format
+        panel.border = element_blank(), #Set the border
+        panel.grid.major = element_blank(), #Set the major gridlines
+        panel.grid.minor = element_blank(), #Set the minor gridlines
+        text = element_text(size=18),  # set element text
+        plot.background =element_blank(), #Set the plot background
+        legend.key = element_blank()) + #Set plot legend key
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect(colour = "black", size=1))+
+        theme(aspect.ratio=1)+
+  ylab(expression(paste("bc.dist"))) +
+    geom_boxplot(outlier.shape = NA)
+
+
+
+
+
+
+
+
+
+
+ggplot(Dist.compare.df, aes(x=PolypZones, y=bc.dist, fill=PolypZones)) + 
+  ylim(0,.5)+
+  theme(axis.line = element_line(color = 'black'), #Set the axes color
+        axis.title=element_text(size=14,face="bold"), #Set axis format
+        panel.border = element_blank(), #Set the border
+        panel.grid.major = element_blank(), #Set the major gridlines
+        panel.grid.minor = element_blank(), #Set the minor gridlines
+        text = element_text(size=18),  # set element text
+        plot.background =element_blank(), #Set the plot background
+        legend.key = element_blank()) + #Set plot legend key
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect(colour = "black", size=1))+
+        theme(aspect.ratio=1)+
+  ylab(expression(paste("bc.dist"))) +
+    geom_boxplot(outlier.shape = NA,coef = 0) # Or outlier.size = -1 instead of outlier.shape = NA)
+
+
+#try mean and not median
+ggplot(Dist.compare.df, aes(x=PolypZones, y=bc.dist, fill=PolypZones)) + 
+  ylim(0,.5)+
+  theme(axis.line = element_line(color = 'black'), #Set the axes color
+        axis.title=element_text(size=14,face="bold"), #Set axis format
+        panel.border = element_blank(), #Set the border
+        panel.grid.major = element_blank(), #Set the major gridlines
+        panel.grid.minor = element_blank(), #Set the minor gridlines
+        text = element_text(size=18),  # set element text
+        plot.background =element_blank(), #Set the plot background
+        legend.key = element_blank()) + #Set plot legend key
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect(colour = "black", size=1))+
+        theme(aspect.ratio=1)+
+  ylab(expression(paste("bc.dist"))) +
+    geom_boxplot(outlier.shape = NA,coef = 0) # Or outlier.size = -1 instead of outlier.shape = NA)
+
+plot <- ggplot(data = Dist.compare.df, aes(y = bc.dist, x = PolypZones)) + 
+  geom_boxplot(fatten = NULL,outlier.shape = NA) +
+  stat_summary(fun = mean, geom = "errorbar", aes(ymax = ..y.., ymin = ..y..),
+               width = 0.75, size = 1, linetype = "solid")
+print(plot)
+
+# plot
+p <- ggplot(Dist.compare.df, aes(x=PolypZones, y=bc.dist, fill=PolypZones)) +
+    geom_boxplot(alpha=0.7) +
+    stat_summary(fun.y=mean, geom="point", shape=20, size=14, color="red", fill="red") +
+    theme(legend.position="none") +
+    scale_fill_brewer(palette="Set1")
+
+
+
+
+#by colony
+
+#945
+Dist.compare.df.945<-subset(Dist.compare.df, Colony.id=="945")
+
+p945_plot<-ggplot(data=Dist.compare.df.945, aes(x=physical.dist, y=bc.dist)) +
+  geom_point(aes(color=Branch.id, shape=Branch.id), size=4, show.legend = T)+
+  #geom_line(aes(color=Branch.id), linetype=2, show.legend = T)+
+  #scale_color_manual(values=c("dodgerblue3", "darkred"))+
+  xlab("physical.dist") + #Label the X Axis
+  #ylim(0, 11) + #set Y limits
+  #scale_y_log10()+
+      geom_smooth(method='lm')+
+  theme_bw() + #Set the background color
+  theme(axis.line = element_line(color = 'black'), #Set the axes color
+        axis.title=element_text(size=14,face="bold"), #Set axis format
+        panel.border = element_blank(), #Set the border
+        panel.grid.major = element_blank(), #Set the major gridlines
+        panel.grid.minor = element_blank(), #Set the minor gridlines
+        text = element_text(size=18),  # set element text
+        plot.background =element_blank(), #Set the plot background
+        legend.key = element_blank()) + #Set plot legend key
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect(colour = "black", size=1))+
+        theme(aspect.ratio=1)+
+  ylab(expression(paste("bc.dist"))) +
+  ggtitle("945")+
+  theme(plot.title = element_text(size=20, face = "italic"));p945_plot 
+
+    
+
+#957
+Dist.compare.df.957<-subset(Dist.compare.df, Colony.id=="957")
+
+p957_plot<-ggplot(data=Dist.compare.df.957, aes(x=physical.dist, y=bc.dist)) +
+  geom_point(aes(color=Branch.id, shape=Branch.id), size=4, show.legend = T)+
+  #geom_line(aes(color=Branch.id), linetype=2, show.legend = T)+
+  #scale_color_manual(values=c("dodgerblue3", "darkred"))+
+      geom_smooth(method='lm')+
+  xlab("physical.dist") + #Label the X Axis
+  #ylim(0, 11) + #set Y limits
+  #scale_y_log10()+
+  theme_bw() + #Set the background color
+  theme(axis.line = element_line(color = 'black'), #Set the axes color
+        axis.title=element_text(size=14,face="bold"), #Set axis format
+        panel.border = element_blank(), #Set the border
+        panel.grid.major = element_blank(), #Set the major gridlines
+        panel.grid.minor = element_blank(), #Set the minor gridlines
+        text = element_text(size=18),  # set element text
+        plot.background =element_blank(), #Set the plot background
+        legend.key = element_blank()) + #Set plot legend key
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect(colour = "black", size=1))+
+        theme(aspect.ratio=1)+
+  ylab(expression(paste("bc.dist"))) +
+  ggtitle("957")+
+  theme(plot.title = element_text(size=20, face = "italic"));p957_plot 
+
+#959
+Dist.compare.df.959<-subset(Dist.compare.df, Colony.id=="959")
+
+p959_plot<-ggplot(data=Dist.compare.df.959, aes(x=physical.dist, y=bc.dist)) +
+  geom_point(aes(color=Branch.id, shape=Branch.id), size=4, show.legend = T)+
+    geom_smooth(method='lm')+
+  #geom_line(aes(color=Branch.id), linetype=2, show.legend = T)+
+  #scale_color_manual(values=c("dodgerblue3", "darkred"))+
+  xlab("physical.dist") + #Label the X Axis
+  #ylim(0, 11) + #set Y limits
+  #scale_y_log10()+
+  theme_bw() + #Set the background color
+  theme(axis.line = element_line(color = 'black'), #Set the axes color
+        axis.title=element_text(size=14,face="bold"), #Set axis format
+        panel.border = element_blank(), #Set the border
+        panel.grid.major = element_blank(), #Set the major gridlines
+        panel.grid.minor = element_blank(), #Set the minor gridlines
+        text = element_text(size=18),  # set element text
+        plot.background =element_blank(), #Set the plot background
+        legend.key = element_blank()) + #Set plot legend key
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect(colour = "black", size=1))+
+        theme(aspect.ratio=1)+
+  ylab(expression(paste("bc.dist"))) +
+  ggtitle("959")+
+  theme(plot.title = element_text(size=20, face = "italic"));p959_plot 
+
+#960
+Dist.compare.df.960<-subset(Dist.compare.df, Colony.id=="960")
+
+p960_plot<-ggplot(data=Dist.compare.df.960, aes(x=physical.dist, y=bc.dist)) +
+  geom_point(aes(color=Branch.id, shape=Branch.id), size=4, show.legend = T)+
+    geom_smooth(method='lm')+
+  #geom_line(aes(color=Branch.id), linetype=2, show.legend = T)+
+  #scale_color_manual(values=c("dodgerblue3", "darkred"))+
+  xlab("physical.dist") + #Label the X Axis
+  #ylim(0, 11) + #set Y limits
+  #scale_y_log10()+
+  theme_bw() + #Set the background color
+  theme(axis.line = element_line(color = 'black'), #Set the axes color
+        axis.title=element_text(size=14,face="bold"), #Set axis format
+        panel.border = element_blank(), #Set the border
+        panel.grid.major = element_blank(), #Set the major gridlines
+        panel.grid.minor = element_blank(), #Set the minor gridlines
+        text = element_text(size=18),  # set element text
+        plot.background =element_blank(), #Set the plot background
+        legend.key = element_blank()) + #Set plot legend key
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect(colour = "black", size=1))+
+        theme(aspect.ratio=1)+
+  ylab(expression(paste("bc.dist"))) +
+  ggtitle("960")+
+  theme(plot.title = element_text(size=20, face = "italic"));p960_plot 
+
+#961
+Dist.compare.df.961<-subset(Dist.compare.df, Colony.id=="961")
+
+p961_plot<-ggplot(data=Dist.compare.df.961, aes(x=physical.dist, y=bc.dist)) +
+  geom_point(aes(color=Branch.id, shape=Branch.id), size=4, show.legend = T)+
+    geom_smooth(method='lm')+
+  #geom_line(aes(color=Branch.id), linetype=2, show.legend = T)+
+  #scale_color_manual(values=c("dodgerblue3", "darkred"))+
+  xlab("physical.dist") + #Label the X Axis
+  #ylim(0, 11) + #set Y limits
+  #scale_y_log10()+
+  theme_bw() + #Set the background color
+  theme(axis.line = element_line(color = 'black'), #Set the axes color
+        axis.title=element_text(size=14,face="bold"), #Set axis format
+        panel.border = element_blank(), #Set the border
+        panel.grid.major = element_blank(), #Set the major gridlines
+        panel.grid.minor = element_blank(), #Set the minor gridlines
+        text = element_text(size=18),  # set element text
+        plot.background =element_blank(), #Set the plot background
+        legend.key = element_blank()) + #Set plot legend key
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect(colour = "black", size=1))+
+        theme(aspect.ratio=1)+
+  ylab(expression(paste("bc.dist"))) +
+  ggtitle("961")+
+  theme(plot.title = element_text(size=20, face = "italic"));p961_plot 
+
+
+#962
+Dist.compare.df.962<-subset(Dist.compare.df, Colony.id=="962")
+
+p962_plot<-ggplot(data=Dist.compare.df.962, aes(x=physical.dist, y=bc.dist)) +
+  geom_point(aes(color=Branch.id, shape=Branch.id), size=4, show.legend = T)+
+    geom_smooth(method='lm')+
+  #geom_line(aes(color=Branch.id), linetype=2, show.legend = T)+
+  #scale_color_manual(values=c("dodgerblue3", "darkred"))+
+  xlab("physical.dist") + #Label the X Axis
+  #ylim(0, 11) + #set Y limits
+  #scale_y_log10()+
+  theme_bw() + #Set the background color
+  theme(axis.line = element_line(color = 'black'), #Set the axes color
+        axis.title=element_text(size=14,face="bold"), #Set axis format
+        panel.border = element_blank(), #Set the border
+        panel.grid.major = element_blank(), #Set the major gridlines
+        panel.grid.minor = element_blank(), #Set the minor gridlines
+        text = element_text(size=18),  # set element text
+        plot.background =element_blank(), #Set the plot background
+        legend.key = element_blank()) + #Set plot legend key
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect(colour = "black", size=1))+
+        theme(aspect.ratio=1)+
+  ylab(expression(paste("bc.dist"))) +
+  ggtitle("962")+
+  theme(plot.title = element_text(size=20, face = "italic"));p962_plot 
+
+
+
+#963
+Dist.compare.df.963<-subset(Dist.compare.df, Colony.id=="963")
+
+p963_plot<-ggplot(data=Dist.compare.df.963, aes(x=physical.dist, y=bc.dist)) +
+  geom_point(aes(color=Branch.id, shape=Branch.id), size=4, show.legend = T)+
+    geom_smooth(method='lm')+
+  #geom_line(aes(color=Branch.id), linetype=2, show.legend = T)+
+  #scale_color_manual(values=c("dodgerblue3", "darkred"))+
+  xlab("physical.dist") + #Label the X Axis
+  #ylim(0, 11) + #set Y limits
+  #scale_y_log10()+
+  theme_bw() + #Set the background color
+  theme(axis.line = element_line(color = 'black'), #Set the axes color
+        axis.title=element_text(size=14,face="bold"), #Set axis format
+        panel.border = element_blank(), #Set the border
+        panel.grid.major = element_blank(), #Set the major gridlines
+        panel.grid.minor = element_blank(), #Set the minor gridlines
+        text = element_text(size=18),  # set element text
+        plot.background =element_blank(), #Set the plot background
+        legend.key = element_blank()) + #Set plot legend key
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect(colour = "black", size=1))+
+        theme(aspect.ratio=1)+
+  ylab(expression(paste("bc.dist"))) +
+  ggtitle("963")+
+  theme(plot.title = element_text(size=20, face = "italic"));p963_plot 
+
+#964
+Dist.compare.df.964<-subset(Dist.compare.df, Colony.id=="964")
+
+p964_plot<-ggplot(data=Dist.compare.df.964, aes(x=physical.dist, y=bc.dist)) +
+  geom_point(aes(color=Branch.id, shape=Branch.id), size=4, show.legend = T)+
+    geom_smooth(method='lm')+
+  #geom_line(aes(color=Branch.id), linetype=2, show.legend = T)+
+  #scale_color_manual(values=c("dodgerblue3", "darkred"))+
+  xlab("physical.dist") + #Label the X Axis
+  #ylim(0, 11) + #set Y limits
+  #scale_y_log10()+
+  theme_bw() + #Set the background color
+  theme(axis.line = element_line(color = 'black'), #Set the axes color
+        axis.title=element_text(size=14,face="bold"), #Set axis format
+        panel.border = element_blank(), #Set the border
+        panel.grid.major = element_blank(), #Set the major gridlines
+        panel.grid.minor = element_blank(), #Set the minor gridlines
+        text = element_text(size=18),  # set element text
+        plot.background =element_blank(), #Set the plot background
+        legend.key = element_blank()) + #Set plot legend key
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect(colour = "black", size=1))+
+        theme(aspect.ratio=1)+
+  ylab(expression(paste("bc.dist"))) +
+  ggtitle("964")+
+  theme(plot.title = element_text(size=20, face = "italic"));p964_plot 
+
+#965
+Dist.compare.df.965<-subset(Dist.compare.df, Colony.id=="965")
+
+p965_plot<-ggplot(data=Dist.compare.df.965, aes(x=physical.dist, y=bc.dist)) +
+  geom_point(aes(color=Branch.id, shape=Branch.id), size=4, show.legend = T)+
+    geom_smooth(method='lm')+
+  #geom_line(aes(color=Branch.id), linetype=2, show.legend = T)+
+  #scale_color_manual(values=c("dodgerblue3", "darkred"))+
+  xlab("physical.dist") + #Label the X Axis
+  #ylim(0, 11) + #set Y limits
+  #scale_y_log10()+
+  theme_bw() + #Set the background color
+  theme(axis.line = element_line(color = 'black'), #Set the axes color
+        axis.title=element_text(size=14,face="bold"), #Set axis format
+        panel.border = element_blank(), #Set the border
+        panel.grid.major = element_blank(), #Set the major gridlines
+        panel.grid.minor = element_blank(), #Set the minor gridlines
+        text = element_text(size=18),  # set element text
+        plot.background =element_blank(), #Set the plot background
+        legend.key = element_blank()) + #Set plot legend key
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect(colour = "black", size=1))+
+        theme(aspect.ratio=1)+
+  ylab(expression(paste("bc.dist"))) +
+  ggtitle("965")+
+  theme(plot.title = element_text(size=20, face = "italic"));p965_plot 
+
+#966
+Dist.compare.df.966<-subset(Dist.compare.df, Colony.id=="966")
+
+p966_plot<-ggplot(data=Dist.compare.df.966, aes(x=physical.dist, y=bc.dist)) +
+  geom_point(aes(color=Branch.id, shape=Branch.id), size=4, show.legend = T)+
+    geom_smooth(method='lm')+
+  #geom_line(aes(color=Branch.id), linetype=2, show.legend = T)+
+  #scale_color_manual(values=c("dodgerblue3", "darkred"))+
+  xlab("physical.dist") + #Label the X Axis
+  #ylim(0, 11) + #set Y limits
+  #scale_y_log10()+
+  theme_bw() + #Set the background color
+  theme(axis.line = element_line(color = 'black'), #Set the axes color
+        axis.title=element_text(size=14,face="bold"), #Set axis format
+        panel.border = element_blank(), #Set the border
+        panel.grid.major = element_blank(), #Set the major gridlines
+        panel.grid.minor = element_blank(), #Set the minor gridlines
+        text = element_text(size=18),  # set element text
+        plot.background =element_blank(), #Set the plot background
+        legend.key = element_blank()) + #Set plot legend key
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect(colour = "black", size=1))+
+        theme(aspect.ratio=1)+
+  ylab(expression(paste("bc.dist"))) +
+  ggtitle("966")+
+  theme(plot.title = element_text(size=20, face = "italic"));p966_plot 
+
+#967
+Dist.compare.df.967<-subset(Dist.compare.df, Colony.id=="967")
+
+p967_plot<-ggplot(data=Dist.compare.df.967, aes(x=physical.dist, y=bc.dist)) +
+  geom_point(aes(color=Branch.id, shape=Branch.id), size=4, show.legend = T)+
+    geom_smooth(method='lm')+
+  #geom_line(aes(color=Branch.id), linetype=2, show.legend = T)+
+  #scale_color_manual(values=c("dodgerblue3", "darkred"))+
+  xlab("physical.dist") + #Label the X Axis
+  #ylim(0, 11) + #set Y limits
+  #scale_y_log10()+
+  theme_bw() + #Set the background color
+  theme(axis.line = element_line(color = 'black'), #Set the axes color
+        axis.title=element_text(size=14,face="bold"), #Set axis format
+        panel.border = element_blank(), #Set the border
+        panel.grid.major = element_blank(), #Set the major gridlines
+        panel.grid.minor = element_blank(), #Set the minor gridlines
+        text = element_text(size=18),  # set element text
+        plot.background =element_blank(), #Set the plot background
+        legend.key = element_blank()) + #Set plot legend key
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect(colour = "black", size=1))+
+        theme(aspect.ratio=1)+
+  ylab(expression(paste("bc.dist"))) +
+  ggtitle("967")+
+  theme(plot.title = element_text(size=20, face = "italic"));p967_plot 
+
+#968
+Dist.compare.df.968<-subset(Dist.compare.df, Colony.id=="968")
+
+p968_plot<-ggplot(data=Dist.compare.df.968, aes(x=physical.dist, y=bc.dist)) +
+  geom_point(aes(color=Branch.id, shape=Branch.id), size=4, show.legend = T)+
+    geom_smooth(method='lm')+
+  #geom_line(aes(color=Branch.id), linetype=2, show.legend = T)+
+  #scale_color_manual(values=c("dodgerblue3", "darkred"))+
+  xlab("physical.dist") + #Label the X Axis
+  #ylim(0, 11) + #set Y limits
+  #scale_y_log10()+
+  theme_bw() + #Set the background color
+  theme(axis.line = element_line(color = 'black'), #Set the axes color
+        axis.title=element_text(size=14,face="bold"), #Set axis format
+        panel.border = element_blank(), #Set the border
+        panel.grid.major = element_blank(), #Set the major gridlines
+        panel.grid.minor = element_blank(), #Set the minor gridlines
+        text = element_text(size=18),  # set element text
+        plot.background =element_blank(), #Set the plot background
+        legend.key = element_blank()) + #Set plot legend key
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect(colour = "black", size=1))+
+        theme(aspect.ratio=1)+
+  ylab(expression(paste("bc.dist"))) +
+  ggtitle("968")+
+  theme(plot.title = element_text(size=20, face = "italic"));p968_plot 
+
+#969
+Dist.compare.df.969<-subset(Dist.compare.df, Colony.id=="969")
+
+p969_plot<-ggplot(data=Dist.compare.df.969, aes(x=physical.dist, y=bc.dist)) +
+  geom_point(aes(color=Branch.id, shape=Branch.id), size=4, show.legend = T)+
+    geom_smooth(method='lm')+
+  #geom_line(aes(color=Branch.id), linetype=2, show.legend = T)+
+  #scale_color_manual(values=c("dodgerblue3", "darkred"))+
+  xlab("physical.dist") + #Label the X Axis
+  #ylim(0, 11) + #set Y limits
+  #scale_y_log10()+
+  theme_bw() + #Set the background color
+  theme(axis.line = element_line(color = 'black'), #Set the axes color
+        axis.title=element_text(size=14,face="bold"), #Set axis format
+        panel.border = element_blank(), #Set the border
+        panel.grid.major = element_blank(), #Set the major gridlines
+        panel.grid.minor = element_blank(), #Set the minor gridlines
+        text = element_text(size=18),  # set element text
+        plot.background =element_blank(), #Set the plot background
+        legend.key = element_blank()) + #Set plot legend key
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect(colour = "black", size=1))+
+        theme(aspect.ratio=1)+
+  ylab(expression(paste("bc.dist"))) +
+  ggtitle("969")+
+  theme(plot.title = element_text(size=20, face = "italic"));p969_plot 
+
+#971
+Dist.compare.df.971<-subset(Dist.compare.df, Colony.id=="971")
+
+p971_plot<-ggplot(data=Dist.compare.df.971, aes(x=physical.dist, y=bc.dist)) +
+  geom_point(aes(color=Branch.id, shape=Branch.id), size=4, show.legend = T)+
+    geom_smooth(method='lm')+
+  #geom_line(aes(color=Branch.id), linetype=2, show.legend = T)+
+  #scale_color_manual(values=c("dodgerblue3", "darkred"))+
+  xlab("physical.dist") + #Label the X Axis
+  #ylim(0, 11) + #set Y limits
+  #scale_y_log10()+
+  theme_bw() + #Set the background color
+  theme(axis.line = element_line(color = 'black'), #Set the axes color
+        axis.title=element_text(size=14,face="bold"), #Set axis format
+        panel.border = element_blank(), #Set the border
+        panel.grid.major = element_blank(), #Set the major gridlines
+        panel.grid.minor = element_blank(), #Set the minor gridlines
+        text = element_text(size=18),  # set element text
+        plot.background =element_blank(), #Set the plot background
+        legend.key = element_blank()) + #Set plot legend key
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect(colour = "black", size=1))+
+        theme(aspect.ratio=1)+
+  ylab(expression(paste("bc.dist"))) +
+  ggtitle("971")+
+  theme(plot.title = element_text(size=20, face = "italic"));p971_plot 
+
+#974
+Dist.compare.df.974<-subset(Dist.compare.df, Colony.id=="974")
+
+p974_plot<-ggplot(data=Dist.compare.df.974, aes(x=physical.dist, y=bc.dist)) +
+  geom_point(aes(color=Branch.id, shape=Branch.id), size=4, show.legend = T)+
+    geom_smooth(method='lm')+
+  #geom_line(aes(color=Branch.id), linetype=2, show.legend = T)+
+  #scale_color_manual(values=c("dodgerblue3", "darkred"))+
+  xlab("physical.dist") + #Label the X Axis
+  #ylim(0, 11) + #set Y limits
+  #scale_y_log10()+
+  theme_bw() + #Set the background color
+  theme(axis.line = element_line(color = 'black'), #Set the axes color
+        axis.title=element_text(size=14,face="bold"), #Set axis format
+        panel.border = element_blank(), #Set the border
+        panel.grid.major = element_blank(), #Set the major gridlines
+        panel.grid.minor = element_blank(), #Set the minor gridlines
+        text = element_text(size=18),  # set element text
+        plot.background =element_blank(), #Set the plot background
+        legend.key = element_blank()) + #Set plot legend key
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect(colour = "black", size=1))+
+        theme(aspect.ratio=1)+
+  ylab(expression(paste("bc.dist"))) +
+  ggtitle("974")+
+  theme(plot.title = element_text(size=20, face = "italic"));p974_plot 
+
+#976
+Dist.compare.df.976<-subset(Dist.compare.df, Colony.id=="976")
+
+p976_plot<-ggplot(data=Dist.compare.df.976, aes(x=physical.dist, y=bc.dist)) +
+  geom_point(aes(color=Branch.id, shape=Branch.id), size=4, show.legend = T)+
+    geom_smooth(method='lm')+
+  #geom_line(aes(color=Branch.id), linetype=2, show.legend = T)+
+  #scale_color_manual(values=c("dodgerblue3", "darkred"))+
+  xlab("physical.dist") + #Label the X Axis
+  #ylim(0, 11) + #set Y limits
+  #scale_y_log10()+
+  theme_bw() + #Set the background color
+  theme(axis.line = element_line(color = 'black'), #Set the axes color
+        axis.title=element_text(size=14,face="bold"), #Set axis format
+        panel.border = element_blank(), #Set the border
+        panel.grid.major = element_blank(), #Set the major gridlines
+        panel.grid.minor = element_blank(), #Set the minor gridlines
+        text = element_text(size=18),  # set element text
+        plot.background =element_blank(), #Set the plot background
+        legend.key = element_blank()) + #Set plot legend key
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect(colour = "black", size=1))+
+        theme(aspect.ratio=1)+
+  ylab(expression(paste("bc.dist"))) +
+  ggtitle("976")+
+  theme(plot.title = element_text(size=20, face = "italic"));p976_plot 
+
+#978
+Dist.compare.df.978<-subset(Dist.compare.df, Colony.id=="978")
+
+p978_plot<-ggplot(data=Dist.compare.df.978, aes(x=physical.dist, y=bc.dist)) +
+  geom_point(aes(color=Branch.id, shape=Branch.id), size=4, show.legend = T)+
+    geom_smooth(method='lm')+
+  #geom_line(aes(color=Branch.id), linetype=2, show.legend = T)+
+  #scale_color_manual(values=c("dodgerblue3", "darkred"))+
+  xlab("physical.dist") + #Label the X Axis
+  #ylim(0, 11) + #set Y limits
+  #scale_y_log10()+
+  theme_bw() + #Set the background color
+  theme(axis.line = element_line(color = 'black'), #Set the axes color
+        axis.title=element_text(size=14,face="bold"), #Set axis format
+        panel.border = element_blank(), #Set the border
+        panel.grid.major = element_blank(), #Set the major gridlines
+        panel.grid.minor = element_blank(), #Set the minor gridlines
+        text = element_text(size=18),  # set element text
+        plot.background =element_blank(), #Set the plot background
+        legend.key = element_blank()) + #Set plot legend key
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect(colour = "black", size=1))+
+        theme(aspect.ratio=1)+
+  ylab(expression(paste("bc.dist"))) +
+  ggtitle("978")+
+  theme(plot.title = element_text(size=20, face = "italic"));p978_plot 
+
+#983
+Dist.compare.df.983<-subset(Dist.compare.df, Colony.id=="983")
+
+p983_plot<-ggplot(data=Dist.compare.df.983, aes(x=physical.dist, y=bc.dist)) +
+  geom_point(aes(color=Branch.id, shape=Branch.id), size=4, show.legend = T)+
+    geom_smooth(method='lm')+
+  #geom_line(aes(color=Branch.id), linetype=2, show.legend = T)+
+  #scale_color_manual(values=c("dodgerblue3", "darkred"))+
+  xlab("physical.dist") + #Label the X Axis
+  #ylim(0, 11) + #set Y limits
+  #scale_y_log10()+
+  theme_bw() + #Set the background color
+  theme(axis.line = element_line(color = 'black'), #Set the axes color
+        axis.title=element_text(size=14,face="bold"), #Set axis format
+        panel.border = element_blank(), #Set the border
+        panel.grid.major = element_blank(), #Set the major gridlines
+        panel.grid.minor = element_blank(), #Set the minor gridlines
+        text = element_text(size=18),  # set element text
+        plot.background =element_blank(), #Set the plot background
+        legend.key = element_blank()) + #Set plot legend key
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect(colour = "black", size=1))+
+        theme(aspect.ratio=1)+
+  ylab(expression(paste("bc.dist"))) +
+  ggtitle("983")+
+  theme(plot.title = element_text(size=20, face = "italic"));p983_plot 
+
+#984
+Dist.compare.df.984<-subset(Dist.compare.df, Colony.id=="984")
+
+p984_plot<-ggplot(data=Dist.compare.df.984, aes(x=physical.dist, y=bc.dist)) +
+  geom_point(aes(color=Branch.id, shape=Branch.id), size=4, show.legend = T)+
+    geom_smooth(method='lm')+
+  #geom_line(aes(color=Branch.id), linetype=2, show.legend = T)+
+  #scale_color_manual(values=c("dodgerblue3", "darkred"))+
+  xlab("physical.dist") + #Label the X Axis
+  #ylim(0, 11) + #set Y limits
+  #scale_y_log10()+
+  theme_bw() + #Set the background color
+  theme(axis.line = element_line(color = 'black'), #Set the axes color
+        axis.title=element_text(size=14,face="bold"), #Set axis format
+        panel.border = element_blank(), #Set the border
+        panel.grid.major = element_blank(), #Set the major gridlines
+        panel.grid.minor = element_blank(), #Set the minor gridlines
+        text = element_text(size=18),  # set element text
+        plot.background =element_blank(), #Set the plot background
+        legend.key = element_blank()) + #Set plot legend key
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect(colour = "black", size=1))+
+        theme(aspect.ratio=1)+
+  ylab(expression(paste("bc.dist"))) +
+  ggtitle("984")+
+  theme(plot.title = element_text(size=20, face = "italic"));p984_plot 
+
+#plot all 
+# The next 4 plots created will be plotted next to each other - this prins terribly
+
+#grid.arrange(p945_plot, p957_plot, p959_plot,p960_plot,p961_plot,
+          # p962_plot,p963_plot,p964_plot,
+          # p965_plot,p966_plot,p967_plot,p968_plot,
+          #    p969_plot,p971_plot,
+          #    p974_plot,p976_plot,p978_plot,p983_plot,p984_plot, nrow = 5)
+```
+ Models on distance compare
+ physical.dist_sq for models
+ 
+```{r}
+Dist.compare.df$Coral<-as.factor(as.character(Dist.compare.df$Coral))
+lmer(bc.dist~physical.dist + (1|Colony.id) + (1|Colony.id:Branch.id), data=Dist.compare.df )
+
+
+shapiro.test(Dist.compare.df$bc.dist) #not normal
+shapiro.test(Dist.compare.df$physical.dist) #not normal
+
+ggqqplot(Dist.compare.df$bc.dist, ylab = "bc.dist")
+# wt
+ggqqplot(Dist.compare.df$physical.dist, ylab = "physical.dist")
+
+
+#Transform the data
+Dist.compare.df<-Dist.compare.df #make a copy
+hist(Dist.compare.df$bc.dist)
+  Dist.compare.df$bc.dist_log<-log10(1+Dist.compare.df$bc.dist)
+  hist(Dist.compare.df$bc.dist_log)
+  Dist.compare.df$bc.dist_sqrt<-sqrt(Dist.compare.df$bc.dist)
+  hist(Dist.compare.df$bc.dist_sqrt) #looks good use this
+
+
+hist(Dist.compare.df$physical.dist)
+
+Dist.compare.df$physical.dist_log<-log10(1+Dist.compare.df$physical.dist)
+hist(Dist.compare.df$physical.dist_log)
+
+Dist.compare.df$physical.dist_t<-(Dist.compare.df$physical.dist)^1/3
+hist(Dist.compare.df$physical.dist_t)
+ggqqplot(Dist.compare.df$physical.dist_t, ylab = "phys.dist")
+
+
+Dist.compare.df$physical.dist_sq<-sqrt(Dist.compare.df$physical.dist)
+hist(Dist.compare.df$physical.dist_sq)
+Dist.compare.df$physical.dist_cub<-Dist.compare.df$physical.dist^(1/3)
+hist(Dist.compare.df$physical.dist_cub)
+ggqqplot(Dist.compare.df$physical.dist_sq, ylab = "physical.dists")
+
+
+Dist.mod<-lmer(bc.dist~physical.dist + (1|Coral) + (1|Coral:Branch), data=Dist.compare.df )
+anova(Dist.mod)  #species differ
+qqPlot(residuals(Dist.mod)) 
+emm<-emmeans(Dist.mod,  ~ physical.dist, adjust="Tukey")
+cld(emm)
+pairs(emm)
+
+mod<- lmer(bc.dist~PolypZones + (1|Coral) + (1|Coral:Branch) , data=Dist.compare.df )
+anova(mod)
+emm<-emmeans(mod,  ~ PolypZones, adjust="Tukey")
+cld(emm)
+pairs(emm)
+
+
+mod<- lmer(bc.dist~PolypZones + (1|Coral) + (1|Branch/Coral) , data=Dist.compare.df )
+anova(mod)
+emm<-emmeans(mod,  ~ PolypZones, adjust="Tukey")
+cld(emm)
+pairs(emm)
+
+
 
 
 ```
