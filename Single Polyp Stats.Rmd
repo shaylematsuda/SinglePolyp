@@ -20,7 +20,7 @@ PERMANOVA for single polyp metabolomics
 ```{r,echo=FALSE}  
 # knitr::opts_chunk$set(warning=FALSE, message=FALSE)
 library(ape)
-
+library(MuMIn)
 library(plyr) 
 library(dplyr)
 library(ggplot2)
@@ -58,17 +58,17 @@ mData<-subset(mData, ATTRIBUTE_Colony_number!="976B")#remove dup
 
 
 
-PERMANOVA
+# PERMANOVA
 ```{r}
 #PERMANOVA
 
 #sep dfs
 mData.sd<-mData[,1:11] #metadata
 mData.meta<-mData[,12:566] #metabolomics data
-# mData.PCoA<-mData[,567:568] #ty's x and y, but can't use these for STATS
-# plot(mData.PCoA) #plot Ty's x and y, to confirm your distance matrix cooresponds right
+ #mData.PCoA<-mData[,567:568] #ty's x and y, but can't use these for STATS
+ #plot(mData.PCoA) #plot Ty's x and y, to confirm your distance matrix cooresponds right
 
-write.csv(mData.sd,"mData.sd3.csv")
+#write.csv(mData.sd,"mData.sd3.csv")
 ####################### Between colonies and Between Sample points
 
 
@@ -86,6 +86,19 @@ mData.dist2<-as.matrix(mData.dist)
 
  mData.dist.sd<- inner_join(rownames_to_column(mData.sd), rownames_to_column(data.frame(PCOAaxes)), type = "right", by = "rowname") #merge PCOAaxes and metadata
 
+ 
+ BetweenColonies_plot<-ggplot(mData.dist.sd, aes(x = Axis.1, y = Axis.2)) + 
+  geom_point(aes(colour = Symbiont.Type), size = 4) +
+  #scale_color_manual(values=Sp.colors)+
+  #geom_text(label = rownames(scores), nudge_x = 0.05, nudge_y = 0.05,check_overlap = T) +
+ # stat_ellipse(aes(x = Axis.1, y = Axis.2, colour = ATTRIBUTE_Colony_number), linetype = 2) +
+  ggtitle("PCoA Between Colonies") +
+  theme_classic();BetweenColonies_plot
+ 
+ metaMDS()
+ 
+ 
+ 
 ############ plot Between colonies ####
 
 BetweenColonies_plot<-ggplot(mData.dist.sd, aes(x = Axis.1, y = Axis.2)) + 
@@ -121,7 +134,17 @@ mData.sd$PolypZone2[mData.sd$PolypZone2 == "Touching 2"] <- "Base"
 mData.sd$PolypZone2[mData.sd$PolypZone2 == "Midle 1"] <- "Mid"
 mData.sd$PolypZone2[mData.sd$PolypZone2 == "Midle 2"] <- "Mid"
 
+adonis(mData.dist~PolypZone2, data=mData.sd)
 pairwise.adonis(mData.dist, mData.sd$PolypZone2)
+
+mData.sd$Area[mData.sd$Area == "Base"] <- "1"
+mData.sd$Area[mData.sd$Area == "Touching 1"] <- "2"
+mData.sd$Area[mData.sd$Area == "Touching 2"] <- "3"
+mData.sd$Area[mData.sd$Area == "Midle 1"] <- "4"
+mData.sd$Area[mData.sd$Area == "Midle 2"] <- "5"
+mData.sd$Area[mData.sd$Area == "Tip"] <- "6"
+
+pairwise.adonis(mData.dist, mData.sd$Area)
 
 
 
@@ -887,7 +910,7 @@ grid.arrange(Branch945_plot, Branch957_plot, Branch959_plot,Branch960_plot,
              Branch978_plot,Branch983_plot,Branch984_plot,nrow = 5)
 ```
 
-2022 Jan 13
+# 2022 Jan 13
 Spatial autocorr stats
 
 Within a branch, physical dist vs dist matrix dists, then run mantel to look for correlation.
@@ -961,6 +984,40 @@ geom_smooth(method = "lm", fill=NA, size=.5)+  #
   ggtitle("all")+
   theme(plot.title = element_text(size=20, face = "italic"));alldist_plot
 
+#single line
+alldist_plot<-ggplot(data=Dist.compare.df, aes(x=physical.dist, y=bc.dist)) +
+  geom_point(aes(color=Coral), size=4, show.legend = T, alpha=I(0.1))+
+geom_smooth(method = "lm", fill=NA, size=.5)+  #
+  #scale_color_manual(values=c("dodgerblue3", "darkred"))+
+  xlab("physical.dist") + #Label the X Axis
+  #ylim(0, 11) + #set Y limits
+  #scale_y_log10()+
+  theme_bw() + #Set the background color
+  theme(axis.line = element_line(color = 'black'), #Set the axes color
+        axis.title=element_text(size=14,face="bold"), #Set axis format
+        panel.border = element_blank(), #Set the border
+        panel.grid.major = element_blank(), #Set the major gridlines
+        panel.grid.minor = element_blank(), #Set the minor gridlines
+        text = element_text(size=18),  # set element text
+        plot.background =element_blank(), #Set the plot background
+        legend.key = element_blank()) + #Set plot legend key
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect(colour = "black", size=1))+
+        theme(aspect.ratio=1)+
+  ylab(expression(paste("bc.dist"))) +
+  ggtitle("all")+
+  theme(plot.title = element_text(size=20, face = "italic"));alldist_plot
+
+#r2 and p for the line
+lineMod<-lm(bc.dist~physical.dist, data=Dist.compare.df)
+anova(lineMod)
+
+
+
+
+
+
 
 #all as boxplot
 
@@ -1003,6 +1060,40 @@ ggplot(distcompare.means, aes(x=PolypZones, y=mean, fill=PolypZones)) +
   ylab(expression(paste("bc.dist"))) +
     geom_boxplot(outlier.shape = NA)
 
+quantiles_95 <- function(x) {
+  r <- quantile(x, probs=c(0.05, 0.25, 0.5, 0.75, 0.95))
+  names(r) <- c("ymin", "lower", "middle", "upper", "ymax")
+  r
+}
+
+ggplot(Dist.compare.df, aes(x=bc.dist, y=PolypZones, fill=PolypZones)) +
+    guides(fill=F) +
+    coord_flip() +
+    stat_summary(fun.data = quantiles_95, geom="boxplot")
+
+
+
+#trying again
+
+Dist.compare.dfTEST <- Dist.compare.df %>% 
+    group_by(PolypZones) %>% 
+    summarise(
+        y0 = quantile(bc.dist, 0.05), 
+        y25 = quantile(bc.dist, 0.25), 
+        y50 = mean(bc.dist), 
+        y75 = quantile(bc.dist, 0.75), 
+        y100 = quantile(bc.dist, 0.95))
+
+
+##### This is the one used in Fig 2 panel D)
+# boxplot using the mean for the middle and 95% quantiles for the whiskers
+ggplot(Dist.compare.dfTEST, aes(PolypZones, fill = as.factor(PolypZones))) +
+    geom_boxplot(
+        aes(ymin = y0, lower = y25, middle = y50, upper = y75, ymax = y100),
+        stat = "identity"
+    ) + 
+    labs(y = "len", title = "Boxplot with Mean Middle Line") + 
+    theme(plot.title = element_text(hjust = 0.5))
 
 
 
@@ -1012,8 +1103,12 @@ ggplot(distcompare.means, aes(x=PolypZones, y=mean, fill=PolypZones)) +
 
 
 
-ggplot(Dist.compare.df, aes(x=PolypZones, y=bc.dist, fill=PolypZones)) + 
-  ylim(0,.5)+
+#with st dev
+ggplot(distcompare.means, aes(x=PolypZones, y=mean, fill=PolypZones)) + 
+ # ylim(0.16,.3)+
+  geom_point(aes(fill=PolypZones))+
+  geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd),
+                width=0.1, show.legend = F)+
   theme(axis.line = element_line(color = 'black'), #Set the axes color
         axis.title=element_text(size=14,face="bold"), #Set axis format
         panel.border = element_blank(), #Set the border
@@ -1027,12 +1122,35 @@ ggplot(Dist.compare.df, aes(x=PolypZones, y=bc.dist, fill=PolypZones)) +
         panel.background = element_rect(colour = "black", size=1))+
         theme(aspect.ratio=1)+
   ylab(expression(paste("bc.dist"))) +
-    geom_boxplot(outlier.shape = NA,coef = 0) # Or outlier.size = -1 instead of outlier.shape = NA)
+    geom_boxplot(outlier.shape = NA)
+
+
+
+
+
+
+
+ggplot(Dist.compare.df, aes(x=PolypZones, y=bc.dist, fill=PolypZones)) + 
+  #ylim(0.05,.3)+
+  theme(axis.line = element_line(color = 'black'), #Set the axes color
+        axis.title=element_text(size=14,face="bold"), #Set axis format
+        panel.border = element_blank(), #Set the border
+        panel.grid.major = element_blank(), #Set the major gridlines
+        panel.grid.minor = element_blank(), #Set the minor gridlines
+        text = element_text(size=18),  # set element text
+        plot.background =element_blank(), #Set the plot background
+        legend.key = element_blank()) + #Set plot legend key
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect(colour = "black", size=1))+
+        theme(aspect.ratio=1)+
+  ylab(expression(paste("bc.dist"))) +
+    geom_boxplot() # Or outlier.size = -1 instead of outlier.shape = NA)
 
 
 #try mean and not median
 ggplot(Dist.compare.df, aes(x=PolypZones, y=bc.dist, fill=PolypZones)) + 
-  ylim(0,.5)+
+  #(0,.6)+
   theme(axis.line = element_line(color = 'black'), #Set the axes color
         axis.title=element_text(size=14,face="bold"), #Set axis format
         panel.border = element_blank(), #Set the border
@@ -1057,13 +1175,15 @@ print(plot)
 # plot
 p <- ggplot(Dist.compare.df, aes(x=PolypZones, y=bc.dist, fill=PolypZones)) +
     geom_boxplot(alpha=0.7) +
-    stat_summary(fun.y=mean, geom="point", shape=20, size=14, color="red", fill="red") +
+    stat_summary(fun=mean, geom="point", shape=20, size=14, color="red", fill="red") +
     theme(legend.position="none") +
-    scale_fill_brewer(palette="Set1")
+    scale_fill_brewer(palette="Set1");p
 
 
 
-
+```
+plots by colony
+```{r}
 #by colony
 
 #945
@@ -1617,12 +1737,10 @@ p984_plot<-ggplot(data=Dist.compare.df.984, aes(x=physical.dist, y=bc.dist)) +
  
 ```{r}
 Dist.compare.df$Coral<-as.factor(as.character(Dist.compare.df$Coral))
-lmer(bc.dist~physical.dist + (1|Colony.id) + (1|Colony.id:Branch.id), data=Dist.compare.df )
-
-
-shapiro.test(Dist.compare.df$bc.dist) #not normal
-shapiro.test(Dist.compare.df$physical.dist) #not normal
-
+mod<-lmer(bc.dist~physical.dist + (1|Coral) + (1|Coral:Branch), data=Dist.compare.df )
+anova(mod)
+  shapiro.test(Dist.compare.df$bc.dist) #not normal
+  shapiro.test(Dist.compare.df$physical.dist) #not normal
 ggqqplot(Dist.compare.df$bc.dist, ylab = "bc.dist")
 # wt
 ggqqplot(Dist.compare.df$physical.dist, ylab = "physical.dist")
@@ -1638,9 +1756,9 @@ hist(Dist.compare.df$bc.dist)
 
 
 hist(Dist.compare.df$physical.dist)
-
-Dist.compare.df$physical.dist_log<-log10(1+Dist.compare.df$physical.dist)
-hist(Dist.compare.df$physical.dist_log)
+  Dist.compare.df$physical.dist_log<-log10(1+Dist.compare.df$physical.dist)
+  hist(Dist.compare.df$physical.dist_log)
+ggqqplot(Dist.compare.df$physical.dist_log, ylab = "phys.dist")
 
 Dist.compare.df$physical.dist_t<-(Dist.compare.df$physical.dist)^1/3
 hist(Dist.compare.df$physical.dist_t)
@@ -1654,15 +1772,24 @@ hist(Dist.compare.df$physical.dist_cub)
 ggqqplot(Dist.compare.df$physical.dist_sq, ylab = "physical.dists")
 
 
-Dist.mod<-lmer(bc.dist~physical.dist + (1|Coral) + (1|Coral:Branch), data=Dist.compare.df )
-anova(Dist.mod)  #species differ
-qqPlot(residuals(Dist.mod)) 
-emm<-emmeans(Dist.mod,  ~ physical.dist, adjust="Tukey")
-cld(emm)
-pairs(emm)
+Dist.mod<-lmer(bc.dist_sqrt~physical.dist_t + (1|Coral) + (1|Coral:Branch), data=Dist.compare.df )
+anova(Dist.mod)  # differ
+qqPlot(residuals(Dist.mod))  # residuals look good
+#physical.dist 0.23483 0.23483     1 817.58  32.727 1.488e-08 ***
 
-mod<- lmer(bc.dist~PolypZones + (1|Coral) + (1|Coral:Branch) , data=Dist.compare.df )
+# mod<-lm(bc.dist~physical.dist, data=Dist.compare.df)#of not transformed data
+# anova(mod)
+# qqPlot(residuals(mod))  
+
+```
+
+```{r}
+### By polyp zones FIG1H! #########
+mod<- lmer(bc.dist_sqrt~PolypZones + (1|Coral) + (1|Coral:Branch) , data=Dist.compare.df )
 anova(mod)
+summary(mod)
+r.squaredGLMM(mod)
+qqPlot(residuals(mod)) # looks good
 emm<-emmeans(mod,  ~ PolypZones, adjust="Tukey")
 cld(emm)
 pairs(emm)
