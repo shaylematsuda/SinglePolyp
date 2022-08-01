@@ -111,7 +111,7 @@ BetweenColonies_plot<-ggplot(mData.dist.sd, aes(x = Axis.1, y = Axis.2)) +
        
 #PERMANOVA between COLONIES
 set.seed(30)
-adonis(mData.dist~ATTRIBUTE_Colony_number, data=mData.sd)
+adonis2(mData.dist~ATTRIBUTE_Colony_number, data=mData.sd)
 
 #                          Df SumsOfSqs MeanSqs F.Model      R2 Pr(>F)   
 # ATTRIBUTE_Colony_number  18    18.732 1.04064  32.641 0.64527  0.001 ***
@@ -122,7 +122,7 @@ adonis(mData.dist~ATTRIBUTE_Colony_number, data=mData.sd)
 
 ############# Between Sampling areas (polyps) ########
 set.seed(30)
-adonis(mData.dist~Area, data=mData.sd)
+adonis2(mData.dist~Area, data=mData.sd)
 #            Df SumsOfSqs  MeanSqs F.Model      R2 Pr(>F)  
 # Area        5    0.7291 0.145811  1.7312 0.02511  0.017 *
 # Residuals 336   28.3000 0.084226         0.97489         
@@ -134,8 +134,8 @@ mData.sd$PolypZone2[mData.sd$PolypZone2 == "Touching 2"] <- "Base"
 mData.sd$PolypZone2[mData.sd$PolypZone2 == "Midle 1"] <- "Mid"
 mData.sd$PolypZone2[mData.sd$PolypZone2 == "Midle 2"] <- "Mid"
 
-adonis(mData.dist~PolypZone2, data=mData.sd)
-pairwise.adonis(mData.dist, mData.sd$PolypZone2)
+adonis2(mData.dist~PolypZone2, data=mData.sd)
+pairwise.adonis2(mData.dist, mData.sd$PolypZone2)
 
 mData.sd$Area[mData.sd$Area == "Base"] <- "1"
 mData.sd$Area[mData.sd$Area == "Touching 1"] <- "2"
@@ -144,11 +144,11 @@ mData.sd$Area[mData.sd$Area == "Midle 1"] <- "4"
 mData.sd$Area[mData.sd$Area == "Midle 2"] <- "5"
 mData.sd$Area[mData.sd$Area == "Tip"] <- "6"
 
-pairwise.adonis(mData.dist, mData.sd$Area)
+pairwise.adonis2(mData.dist, mData.sd$Area)
 
 
 
-adonis(mData.dist~Area*ATTRIBUTE_Colony_number, data=mData.sd)
+adonis2(mData.dist~Area*ATTRIBUTE_Colony_number, data=mData.sd)
 #                               Df SumsOfSqs MeanSqs F.Model      R2 Pr(>F)    
 # Area                           5    0.7291 0.14581   4.864 0.02511  0.001 ***
 # ATTRIBUTE_Colony_number       18   18.7315 1.04064  34.712 0.64527  0.001 ***
@@ -156,7 +156,7 @@ adonis(mData.dist~Area*ATTRIBUTE_Colony_number, data=mData.sd)
 # Residuals                    228    6.8353 0.02998         0.23546           
 # Total                        341   29.0290                 1.00000    
 
-adonis(mData.dist~ATTRIBUTE_Colony_number*ATTRIBUTE_Branch_Letter*Area, data=mData.sd)
+adonis2(mData.dist~ATTRIBUTE_Colony_number*ATTRIBUTE_Branch_Letter*Area, data=mData.sd)
 # 
 #                                                       Df SumsOfSqs MeanSqs F.Model      R2 Pr(>F)
 # Area                                                   5    0.7291       0       0 0.02511      1
@@ -170,7 +170,7 @@ adonis(mData.dist~ATTRIBUTE_Colony_number*ATTRIBUTE_Branch_Letter*Area, data=mDa
 # Total                                                341   29.0290                 1.00000       
 
 
-adonis(mData.dist~ATTRIBUTE_Branch_Letter*Area, data=mData.sd)
+adonis2(mData.dist~ATTRIBUTE_Branch_Letter*Area, data=mData.sd)
 
 
 
@@ -203,7 +203,7 @@ PCOAaxes <- PCOA$vectors[,c(1,2)] #for visualization only
 
 
 set.seed(30)
-adonis(mData.Polyps123.dist~Area, data=mData.Polyps123.sd)
+adonis2(mData.Polyps123.dist~Area, data=mData.Polyps123.sd)
 #            Df SumsOfSqs  MeanSqs F.Model      R2 Pr(>F)
 # Area        2    0.0603 0.030125 0.33161 0.00393  0.992
 # Residuals 168   15.2620 0.090846         0.99607       
@@ -211,7 +211,7 @@ adonis(mData.Polyps123.dist~Area, data=mData.Polyps123.sd)
 
 
 set.seed(30)
-adonis(mData.Polyps123.dist~Area*ATTRIBUTE_Colony_number, data=mData.Polyps123.sd)
+adonis2(mData.Polyps123.dist~Area*ATTRIBUTE_Colony_number, data=mData.Polyps123.sd)
 #                               Df SumsOfSqs MeanSqs F.Model      R2 Pr(>F)    
 # Area                           2    0.0603 0.03013  0.9495 0.00393  0.460    
 # ATTRIBUTE_Colony_number       18   10.7537 0.59743 18.8308 0.70183  0.001 ***
@@ -262,7 +262,7 @@ PCOAaxes <- PCOA$vectors[,c(1,2)] #for visualization only
 
 
 set.seed(30)
-adonis(mData.Branch945.dist~Area, data=mData.Branch945.sd)
+adonis2(mData.Branch945.dist~Area, data=mData.Branch945.sd)
 #            Df SumsOfSqs  MeanSqs F.Model      R2 Pr(>F)
 # Area       5   0.16096 0.032193 0.96577 0.28694  0.499
 # Residuals 12   0.40001 0.033334         0.71306       
@@ -292,7 +292,7 @@ PCOAaxes <- PCOA$vectors[,c(1,2)] #for visualization only
 
 
 set.seed(30)
-adonis(mData.Branch945.dist~Area, data=mData.Branch945.sd)
+adonis2(mData.Branch945.dist~Area, data=mData.Branch945.sd)
 #            Df SumsOfSqs  MeanSqs F.Model      R2 Pr(>F)
 # Area       5   0.16096 0.032193 0.96577 0.28694  0.499
 # Residuals 12   0.40001 0.033334         0.71306       
@@ -325,7 +325,7 @@ PCOAaxes <- PCOA$vectors[,c(1,2)] #for visualization only
 
 
 set.seed(30)
-adonis(mData.Branch959.dist~Area, data=mData.Branch959.sd)
+adonis2(mData.Branch959.dist~Area, data=mData.Branch959.sd)
 # #            Df SumsOfSqs  MeanSqs F.Model      R2 Pr(>F)
 # Area       5  0.084667 0.016933  1.1214 0.31845  0.303
 # Residuals 12  0.181202 0.015100         0.68155       
@@ -356,7 +356,7 @@ PCOAaxes <- PCOA$vectors[,c(1,2)] #for visualization only
 
 
 set.seed(30)
-adonis(mData.Branch960.dist~ATTRIBUTE_Branch_Letter, data=mData.Branch960.sd)
+adonis2(mData.Branch960.dist~ATTRIBUTE_Branch_Letter, data=mData.Branch960.sd)
 # #            Df SumsOfSqs  MeanSqs F.Model      R2 Pr(>F)
 # ATTRIBUTE_Branch_Letter  2   0.05525 0.027625  1.4696 0.16384  0.164
 # Residuals               15   0.28196 0.018798         0.83616       
@@ -387,7 +387,7 @@ PCOAaxes <- PCOA$vectors[,c(1,2)] #for visualization only
 
 
 set.seed(30)
-adonis(mData.Branch961.dist~ATTRIBUTE_Branch_Letter, data=mData.Branch961.sd)
+adonis2(mData.Branch961.dist~ATTRIBUTE_Branch_Letter, data=mData.Branch961.sd)
 #           Df SumsOfSqs  MeanSqs F.Model      R2 Pr(>F)
 # ATTRIBUTE_Branch_Letter  2   0.12052 0.060262  2.7776 0.27026   0.03 *
 # Residuals               15   0.32543 0.021695         0.72974         
@@ -418,7 +418,7 @@ PCOAaxes <- PCOA$vectors[,c(1,2)] #for visualization only
 
 
 set.seed(30)
-adonis(mData.Branch962.dist~ATTRIBUTE_Branch_Letter, data=mData.Branch962.sd)
+adonis2(mData.Branch962.dist~ATTRIBUTE_Branch_Letter, data=mData.Branch962.sd)
 # ATTRIBUTE_Branch_Letter  2   0.23235 0.11618  2.3623 0.23953  0.016 *
 # Residuals               15   0.73770 0.04918         0.76047         
 # Total                   17   0.97005                 1.00000         
@@ -448,7 +448,7 @@ PCOAaxes <- PCOA$vectors[,c(1,2)] #for visualization only
 
 
 set.seed(30)
-adonis(mData.Branch963.dist~ATTRIBUTE_Branch_Letter, data=mData.Branch963.sd)
+adonis2(mData.Branch963.dist~ATTRIBUTE_Branch_Letter, data=mData.Branch963.sd)
 # #            Df SumsOfSqs  MeanSqs F.Model      R2 Pr(>F)
 # ATTRIBUTE_Branch_Letter  2  0.072242 0.036121  4.0202 0.34897  0.004 **
 # Residuals               15  0.134771 0.008985         0.65103          
@@ -479,7 +479,7 @@ PCOAaxes <- PCOA$vectors[,c(1,2)] #for visualization only
 
 
 set.seed(30)
-adonis(mData.Branch964.dist~ATTRIBUTE_Branch_Letter, data=mData.Branch964.sd)
+adonis2(mData.Branch964.dist~ATTRIBUTE_Branch_Letter, data=mData.Branch964.sd)
 # #            Df SumsOfSqs  MeanSqs F.Model      R2 Pr(>F)
 # ATTRIBUTE_Branch_Letter  2   0.06878 0.034389 0.56486 0.07004  0.901
 # Residuals               15   0.91322 0.060881         0.92996       
@@ -510,7 +510,7 @@ PCOAaxes <- PCOA$vectors[,c(1,2)] #for visualization only
 
 
 set.seed(30)
-adonis(mData.Branch965.dist~ATTRIBUTE_Branch_Letter, data=mData.Branch965.sd)
+adonis2(mData.Branch965.dist~ATTRIBUTE_Branch_Letter, data=mData.Branch965.sd)
 # # #            Df SumsOfSqs  MeanSqs F.Model      R2 Pr(>F)
 # ATTRIBUTE_Branch_Letter  2  0.035052 0.017526  1.6975 0.18456  0.096 .
 # Residuals               15  0.154870 0.010325         0.81544         
@@ -541,7 +541,7 @@ PCOAaxes <- PCOA$vectors[,c(1,2)] #for visualization only
 
 
 set.seed(30)
-adonis(mData.Branch966.dist~ATTRIBUTE_Branch_Letter, data=mData.Branch966.sd)
+adonis2(mData.Branch966.dist~ATTRIBUTE_Branch_Letter, data=mData.Branch966.sd)
 # #            Df SumsOfSqs  MeanSqs F.Model      R2 Pr(>F)
 # ATTRIBUTE_Branch_Letter  2   0.09030 0.045150  1.6735 0.18243  0.063 .
 # Residuals               15   0.40469 0.026979         0.81757         
@@ -574,7 +574,7 @@ PCOAaxes <- PCOA$vectors[,c(1,2)] #for visualization only
 
 
 set.seed(30)
-adonis(mData.Branch967.dist~ATTRIBUTE_Branch_Letter, data=mData.Branch967.sd)
+adonis2(mData.Branch967.dist~ATTRIBUTE_Branch_Letter, data=mData.Branch967.sd)
 # #            Df SumsOfSqs  MeanSqs F.Model      R2 Pr(>F)
 # ATTRIBUTE_Branch_Letter  2  0.063923 0.031961  2.1131 0.21981  0.007 **
 # Residuals               15  0.226880 0.015125         0.78019          
@@ -605,7 +605,7 @@ PCOAaxes <- PCOA$vectors[,c(1,2)] #for visualization only
 
 
 set.seed(30)
-adonis(mData.Branch968.dist~ATTRIBUTE_Branch_Letter, data=mData.Branch968.sd)
+adonis2(mData.Branch968.dist~ATTRIBUTE_Branch_Letter, data=mData.Branch968.sd)
 # # #            Df SumsOfSqs  MeanSqs F.Model      R2 Pr(>F)
 # ATTRIBUTE_Branch_Letter  2   0.13431 0.067156  1.9566 0.2069   0.04 *
 # Residuals               15   0.51484 0.034323         0.7931         
@@ -636,7 +636,7 @@ PCOAaxes <- PCOA$vectors[,c(1,2)] #for visualization only
 
 
 set.seed(30)
-adonis(mData.Branch969.dist~ATTRIBUTE_Branch_Letter, data=mData.Branch969.sd)
+adonis2(mData.Branch969.dist~ATTRIBUTE_Branch_Letter, data=mData.Branch969.sd)
 # # #            Df SumsOfSqs  MeanSqs F.Model      R2 Pr(>F)
 # ATTRIBUTE_Branch_Letter  2   0.05642 0.028210  1.1902 0.13695  0.276
 # Residuals               15   0.35554 0.023703         0.86305       
@@ -667,7 +667,7 @@ PCOAaxes <- PCOA$vectors[,c(1,2)] #for visualization only
 
 
 set.seed(30)
-adonis(mData.Branch971.dist~ATTRIBUTE_Branch_Letter, data=mData.Branch971.sd)
+adonis2(mData.Branch971.dist~ATTRIBUTE_Branch_Letter, data=mData.Branch971.sd)
 # #            Df SumsOfSqs  MeanSqs F.Model      R2 Pr(>F)
 # ATTRIBUTE_Branch_Letter  2   0.07725 0.038623  1.1665 0.1346  0.339
 # Residuals               15   0.49665 0.033110         0.8654       
@@ -698,7 +698,7 @@ PCOAaxes <- PCOA$vectors[,c(1,2)] #for visualization only
 
 
 set.seed(30)
-adonis(mData.Branch974.dist~ATTRIBUTE_Branch_Letter, data=mData.Branch974.sd)
+adonis2(mData.Branch974.dist~ATTRIBUTE_Branch_Letter, data=mData.Branch974.sd)
 # #            Df SumsOfSqs  MeanSqs F.Model      R2 Pr(>F)
 # ATTRIBUTE_Branch_Letter  2  0.065853 0.032926  3.0197 0.28705  0.001 ***
 # Residuals               15  0.163557 0.010904         0.71295           
@@ -729,7 +729,7 @@ PCOAaxes <- PCOA$vectors[,c(1,2)] #for visualization only
 
 
 set.seed(30)
-adonis(mData.Branch976.dist~ATTRIBUTE_Branch_Letter, data=mData.Branch976.sd)
+adonis2(mData.Branch976.dist~ATTRIBUTE_Branch_Letter, data=mData.Branch976.sd)
 # #            Df SumsOfSqs  MeanSqs F.Model      R2 Pr(>F)
 # ATTRIBUTE_Branch_Letter  2   0.19834 0.099168  1.6206 0.17769  0.128
 # Residuals               15   0.91786 0.061191         0.82231       
@@ -760,7 +760,7 @@ PCOAaxes <- PCOA$vectors[,c(1,2)] #for visualization only
 
 
 set.seed(30)
-adonis(mData.Branch978.dist~ATTRIBUTE_Branch_Letter, data=mData.Branch978.sd)
+adonis2(mData.Branch978.dist~ATTRIBUTE_Branch_Letter, data=mData.Branch978.sd)
 # #            Df SumsOfSqs  MeanSqs F.Model      R2 Pr(>F)
 # ATTRIBUTE_Branch_Letter  2   0.05551 0.027757  1.2815 0.14593   0.27
 # Residuals               15   0.32490 0.021660         0.85407       
@@ -791,7 +791,7 @@ PCOAaxes <- PCOA$vectors[,c(1,2)] #for visualization only
 
 
 set.seed(30)
-adonis(mData.Branch983.dist~ATTRIBUTE_Branch_Letter, data=mData.Branch983.sd)
+adonis2(mData.Branch983.dist~ATTRIBUTE_Branch_Letter, data=mData.Branch983.sd)
 # #            Df SumsOfSqs  MeanSqs F.Model      R2 Pr(>F)
 # ATTRIBUTE_Branch_Letter  2   0.21713 0.108565  1.0892 0.12681  0.367
 # Residuals               15   1.49516 0.099677         0.87319       
@@ -822,7 +822,7 @@ PCOAaxes <- PCOA$vectors[,c(1,2)] #for visualization only
 
 
 set.seed(30)
-adonis(mData.Branch984.dist~ATTRIBUTE_Branch_Letter, data=mData.Branch984.sd)
+adonis2(mData.Branch984.dist~ATTRIBUTE_Branch_Letter, data=mData.Branch984.sd)
 # #            Df SumsOfSqs  MeanSqs F.Model      R2 Pr(>F)
 # ATTRIBUTE_Branch_Letter  2  0.044803 0.022402  1.7273 0.18719  0.091 .
 # Residuals               15  0.194538 0.012969         0.81281         
@@ -860,7 +860,7 @@ PCOAaxes <- PCOA$vectors[,c(1,2)] #for visualization only
 
 
 set.seed(30)
-adonis(mData.Branch957.A.dist~Area, data=mData.Branch957.A.sd)
+adonis2(mData.Branch957.A.dist~Area, data=mData.Branch957.A.sd)
 #           Df SumsOfSqs MeanSqs F.Model R2 Pr(>F)
 # Area       5  0.097114       0       0  1      1
 # Residuals  0  0.000000    -Inf          0       
@@ -1785,7 +1785,7 @@ qqPlot(residuals(Dist.mod))  # residuals look good
 
 ```{r}
 ### By polyp zones FIG1H! #########
-mod<- lmer(bc.dist_sqrt~PolypZones + (1|Coral) + (1|Coral:Branch) , data=Dist.compare.df )
+mod<- lmer(bc.dist_sqrt~PolypZones + (1|Coral/Branch) , data=Dist.compare.df )
 anova(mod)
 summary(mod)
 r.squaredGLMM(mod)
@@ -1794,12 +1794,17 @@ emm<-emmeans(mod,  ~ PolypZones, adjust="Tukey")
 cld(emm)
 pairs(emm)
 
+#use this non-parametric Kruskal-Wallis test
+kruskal.test(bc.dist ~ PolypZones, data = Dist.compare.df)
+pairwise.wilcox.test(Dist.compare.df$bc.dist_sqrt, Dist.compare.df$PolypZones,
+                 p.adjust.method = "BH")
 
-mod<- lmer(bc.dist~PolypZones + (1|Coral) + (1|Branch/Coral) , data=Dist.compare.df )
-anova(mod)
-emm<-emmeans(mod,  ~ PolypZones, adjust="Tukey")
-cld(emm)
-pairs(emm)
+
+#mod<- lmer(bc.dist~PolypZones + (1|Coral) + (1|Branch:Coral) , data=Dist.compare.df )
+#anova(mod)
+#emm<-emmeans(mod,  ~ PolypZones, adjust="Tukey")
+#cld(emm)
+#pairs(emm)
 
 
 
